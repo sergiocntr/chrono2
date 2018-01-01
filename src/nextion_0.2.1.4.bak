@@ -1,0 +1,222 @@
+/*************************************************************************************************************************
+*    HomeAutomation 2016
+*    Version 3.0
+*    Created By: Waqas Ahmed
+*         Email: ahmed@hobbytronics.com.pk
+*    All Rights Reserved © 2016 HobbyTronics Pakistan
+*    
+*    Configure connection parameters in config.h
+*    Any modification in Functions, init.h tabs and whereever mentioned may leads towards failure of software
+*    Download necessary libraries from the links mentioned before the library including statement
+*
+*
+*************************************************************************************************************************
+  Required Libraries
+*************************************************************************************************************************/
+
+#include <ESP8266WiFi.h>          //builtin library for ESP8266 Arduino Core
+#include <PubSubClient.h>         //https://github.com/knolleary/pubsubclient
+#include <ESP8266httpUpdate.h>    //builtin library for ESP8266 Arduino Core
+#include <ESP8266HTTPClient.h>    //builtin library for ESP8266 Arduino Core
+#include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
+#include "FS.h"                   //builtin library for ESP8266 Arduino Core
+#include "config.h"               //package builtin configuration file
+#include "init.h"                 //package builtin configuration file
+#include "Nextion.h"
+
+/*************************************************************************************************************************
+  Database variables
+*************************************************************************************************************************/
+
+String db_array[] = {"Reboot", "q0", "q1", "q2", "q3"};
+int db_array_len = 5;
+/*
+ * Declare a crop object [page id:0,component id:1, component name: "q0"]. 
+ */
+
+NexText NexTemp = NexText(0, 10, "NexTemp");
+NexText NexHumid = NexText(0, 11, "NexHumid");
+NexText NexTime = NexText(0, 8, "NexTime");
+NexText NexTimeA = NexText(0, 9, "NexTimeA");
+NexText NexMonth = NexText(0, 7, "NexMonth");
+NexText NexDate = NexText(0, 6, "NexDate");
+NexCrop NexFanA = NexCrop(0, 2, "NexFanA");
+NexCrop NexLight = NexCrop(0, 3, "NexLight");
+NexCrop NexPlug = NexCrop(0, 4, "NexPlug");
+NexCrop NexFanB = NexCrop(0, 5, "NexFanB");
+
+/*
+   Register object textNumber, buttonPlus, buttonMinus, to the touch event list.
+*/
+NexTouch *nex_listen_list[] =
+{
+  &NexTemp,
+  &NexHumid,
+  &NexTime,
+  &NexTimeA,
+  &NexMonth,
+  &NexDate,
+  &NexFanA,
+  &NexLight,
+  &NexPlug,
+  &NexFanB,
+  NULL
+};
+
+void update_buttons()
+{
+    NexFanA.setPic(db_array_value[1]);
+    NexLight.setPic(db_array_value[2]);
+    NexPlug.setPic(db_array_value[3]);
+    NexFanB.setPic(db_array_value[4]);
+}
+
+void NexFanAPushCallback(void *ptr)
+{
+    uint32_t number = toggle_button(1);
+    NexFanA.setPic(number);
+    if (number == 0) {
+      send("NexFanA", "OFF");
+    } else {
+      send("NexFanA", "ON");
+    }
+}
+
+void NexLightPushCallback(void *ptr)
+{
+    uint32_t number = toggle_button(2);
+    NexLight.setPic(number);
+    if (number == 0) {
+      send("NexLight", "OFF");
+    } else {
+      send("NexLight", "ON");
+    }
+}
+
+void NexPlugPushCallback(void *ptr)
+{
+    uint32_t number = toggle_button(3);
+    NexPlug.setPic(number);
+    if (number == 0) {
+      send("NexPlug", "OFF");
+    } else {
+      send("NexPlug", "ON");
+    }
+}
+
+void NexFanBPushCallback(void *ptr)
+{
+    uint32_t number = toggle_button(4);
+    NexFanB.setPic(number);
+    if (number == 0) {
+      send("NexFanB", "OFF");
+    } else {
+      send("NexFanB", "ON");
+    }
+}
+
+int toggle_button(int value)
+{
+  if (db_array_value[value] == 1) {
+    db_array_value[value] = 0;
+    return 0;
+  } else {
+    db_array_value[value] = 1;
+    return 1;
+  }
+}
+
+/*************************************************************************************************************************
+  Setup Function
+*************************************************************************************************************************/
+
+void setup() {
+  nexInit();
+  boot();     //necessary to call at first during setup function for proper functioning
+  
+  NexFanA.attachPush(NexFanAPushCallback);
+  NexLight.attachPush(NexLightPushCallback);
+  NexPlug.attachPush(NexPlugPushCallback);
+  NexFanB.attachPush(NexFanBPushCallback);
+  update_buttons();
+  
+  connectWiFi();  //necessary to call at the last during setup function for proper functioning
+}
+
+/*************************************************************************************************************************
+  MQTT Incoming Message Handler
+*************************************************************************************************************************/
+
+void callback(char* topic, byte* payload, unsigned int length)
+{
+//*************************************************************************************************************************
+//Any modification to the portion below may leads towards system failure                                                  *
+//                                                                                                                        *
+  String message = String();
+  for (int i = 0; i < length; i++) {  //A loop to convert incomming message to a String
+    char input_char = (char)payload[i];
+    message += input_char;
+  }
+  Serial.print("mqtt message received (");
+  Serial.print(message);
+  Serial.println(")");
+  send("Message recevied on ESP8266 Unit: [" + message + "]");
+  incomming(message);                 //Performing system fucntions such as OTA
+//                                                                                                                        *
+//Any modification to the portion above may leads towards system failure                                                  *                                             *
+//*************************************************************************************************************************
+//add your custom code for incomming message below this line
+  
+  char jsonChar[100];
+  message.toCharArray(jsonChar, message.length()+1);
+  StaticJsonBuffer<500> jsonBuffer;
+  JsonObject& root = jsonBuffer.parseObject(jsonChar);
+  String msg_Topic = root["topic"];
+  int msg_Payload = root["payload"];
+  
+  if(msg_Topic == "UpdateTime") {
+    const char* Nex_Time = root["Time"];
+    const char* Nex_Time_A = root["TimeA"];
+
+    NexTime.setText(Nex_Time);
+    NexTime.setText(Nex_Time);
+    NexTimeA.setText(Nex_Time_A);
+    
+  } else if(msg_Topic == "UpdateDate") {
+    const char* Nex_Month = root["Month"];
+    const char* Nex_Date = root["Date"];
+    NexMonth.setText(Nex_Month);
+    NexMonth.setText(Nex_Month);
+    NexDate.setText(Nex_Date);
+    
+  } else if(msg_Topic == "UpdateEnv") {
+    const char* Nex_Temp = root["Temp"];
+    const char* Nex_Humid = root["Humid"];
+    NexTemp.setText(Nex_Temp);
+    NexTemp.setText(Nex_Temp);
+    NexHumid.setText(Nex_Humid);
+    
+  } else if(msg_Topic == "ChangeBackLight") {
+    String Back_Light = root["BackLight"];
+    sendCommand(Back_Light.c_str());
+    sendCommand(Back_Light.c_str());
+  }
+  
+}
+
+/*************************************************************************************************************************
+  Loop Function
+*************************************************************************************************************************/
+
+void loop()
+{
+  keeplive();   //necessary to call keep alive for proper functioning
+  nexLoop(nex_listen_list);
+}
+
+
+
+/*************************************************************************************************************************
+  End of the file
+*************************************************************************************************************************/
+
