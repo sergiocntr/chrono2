@@ -16,13 +16,17 @@
 
 #include <ESP8266WiFi.h>          //builtin library for ESP8266 Arduino Core
 #include <PubSubClient.h>         //https://github.com/knolleary/pubsubclient
-#include <ESP8266httpUpdate.h>    //builtin library for ESP8266 Arduino Core
-#include <ESP8266HTTPClient.h>    //builtin library for ESP8266 Arduino Core
+//#include <ESP8266httpUpdate.h>    //builtin library for ESP8266 Arduino Core
+//#include <ESP8266HTTPClient.h>    //builtin library for ESP8266 Arduino Core
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
 #include "FS.h"                   //builtin library for ESP8266 Arduino Core
 #include "config.h"               //package builtin configuration file
 #include "init.h"                 //package builtin configuration file
 #include "Nextion.h"
+//#include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 
 /*************************************************************************************************************************
   Database variables
@@ -159,6 +163,7 @@ void setup() {
   update_buttons();
 
   connectWiFi();  //necessary to call at the last during setup function for proper functioning
+  setupOTA();
 }
 
 /*************************************************************************************************************************

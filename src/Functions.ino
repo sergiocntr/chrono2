@@ -52,6 +52,7 @@ void keeplive()
       }
     }
   scheduleReboot();
+  ArduinoOTA.handle();
   delay(1);
 }
 
@@ -85,6 +86,7 @@ void connectWiFi()
     Serial.println(this_print);
     long wifi_initiate = millis();
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    WiFi.config(ip, gateway, subnet); // Set static IP (2,7s) or 8.6s with DHCP  + 2s on batteryWiFi.config(ip, gateway, subnet); // Set static IP (2,7s) or 8.6s with DHCP  + 2s on battery
     while (WiFi.status() != WL_CONNECTED) {
       Serial.print(".");
       if (WiFi.status() == WL_CONNECTED) {
@@ -162,7 +164,7 @@ void incomming(String message)
   int message_length = message.length();
 
   if (message == "update") { // When we receive ota notification from MQTT, start the update
-    update();
+    //update();
   } else if (message == "reboot") {
     reboot();
   } else if (message == "format") {
@@ -209,7 +211,7 @@ void incomming(String message)
   Over The Air Update (OTA)
 *************************************************************************************************************************/
 
-void update()
+/*void update()
 {
   Serial.println("starting system update");
   client.publish(MQTT_PUBLISH_TOPIC, "starting system update", true);
@@ -217,8 +219,30 @@ void update()
   String link = "/";
   link += String(SKETCH_ID) + "_" + String(SKETCH_VERSION) + ".cpp.nodemcu.bin";
   ESPhttpUpdate.update(MQTT_SERVER, 82, link);
+}*/
+void setupOTA() {
+  ArduinoOTA.onStart([]() {
+      Serial.println("Start");
+    });
+    ArduinoOTA.onEnd([]() {
+      Serial.println("\nEnd");
+    });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
+    ArduinoOTA.begin();
+    Serial.println("Ready");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
 }
-
 /*************************************************************************************************************************
   Fetch GPIO / Variable Status
 *************************************************************************************************************************/
