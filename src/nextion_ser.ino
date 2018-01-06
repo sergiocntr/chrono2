@@ -46,7 +46,8 @@ int db_array_len = 5;
  NexText Nout_hum    = NexText(0, 7, "Nout_hum");
  NexText Nin_hum     = NexText(0, 8, "Nin_hum");
  NexText Ncurr_hour  = NexText(0, 9, "Ncurr_hour");
- NexText Ncurr_water_temp  = NexText(0, 9, "Nwat_temp");
+ NexText Ncurr_water_temp  = NexText(0, 12, "Nwater_temp");
+ NexText Nday  = NexText(0, 13, "Nday");
 
  NexButton Nb_up     = NexButton(0, 10, "Nb_up");
  NexButton Nb_down   = NexButton(0, 11, "Nb_down");
@@ -85,9 +86,7 @@ void Nb_upPushCallback(void *ptr)
   Nset_temp.getText(buffer, sizeof(buffer));
   number = strtod (buffer,NULL);
   number += 0.5;
-
-  memset(buffer, 0, sizeof(buffer));
-  snprintf(buffer, sizeof(buffer), "%g", number);
+  dtostrf(number, 4, 1, buffer);
 
   /* Set the text value of button component [the value is string type]. */
   Nset_temp.setText(buffer);
@@ -107,9 +106,9 @@ void Nb_downPushCallback(void *ptr)
 
     number = strtod (buffer,NULL);
     number -= 0.5;
-
-    memset(buffer, 0, sizeof(buffer));
-    snprintf(buffer, sizeof(buffer), "%g", number);
+    dtostrf(number, 4, 1, buffer);
+    //memset(buffer, 0, sizeof(buffer));
+    //snprintf(buffer, sizeof(buffer), "%g", number);
 
     /* Set the text value of button component [the value is string type]. */
     Nset_temp.setText(buffer);
@@ -155,7 +154,13 @@ int toggle_button(int value)
 void setup() {
   nexInit();
   boot();     //necessary to call at first during setup function for proper functioning
-
+  sendCommand("dim=20");
+  //sendCommand("thsp=30");
+  //sendCommand("thup=1");
+  //nexSerial.write(0xFF);
+  //nexSerial.write(0xFF);
+  //nexSerial.write(0xFF);
+  //nexSerial.flush();
   Nrisc_on.attachPush(Nrisc_onPushCallback);
   Nwater_on.attachPush(Nwater_onPushCallback);
   Nb_up.attachPush(Nb_upPushCallback);
@@ -200,7 +205,9 @@ void callback(char* topic, byte* payload, unsigned int length)
     //Serial.println("msg_Topic: " + msg_Topic);
     if(msg_Topic == "UpTime") {
       const char* Nex_Time = root["hours"];
+      const char* Nex_Day = root["Day"];
       Ncurr_hour.setText(Nex_Time);
+      Nday.setText(Nex_Day);
       //Serial.println("regolata ora " + ((String)Nex_Time));
     }
   }
@@ -215,11 +222,19 @@ void callback(char* topic, byte* payload, unsigned int length)
   }
   if(strcmp(topic, extSensTopic) == 0 ) {
     String msg_Topic = root["topic"];
-    if(msg_Topic == "DHTCamera") {
-      const char* Nex_inHm = root["Hum"];
-      const char* Nex_inTemp = root["Temp"];
-      Ntcurr.setText(Nex_inTemp);
-      Nin_hum.setText(Nex_inHm);
+    if(msg_Topic == "Caldaia") {
+      const char* Nex_wt = root["acqua"];
+      //dtostrf(root["acqua"], 4, 1, buffer);
+      Ncurr_water_temp.setText(Nex_wt);
+      //const char* Nex_inTemp = root["Temp"];
+      //Ncurr_water_temp.setText(water_temp);
+    }
+    else if (msg_Topic == "Terrazza"){
+      const char* Nex_outHm = root["Hum"];
+      const char* Nex_outTemp = root["Temp"];
+      Nout_temp.setText(Nex_outTemp);
+      Nout_hum.setText(Nex_outHm);
+
     }
   }
 

@@ -12,7 +12,6 @@ void boot()
   pinMode(16, OUTPUT);
   digitalWrite(16, HIGH);
   Serial.begin(9600);
-  //Serial.swap();
   SPIFFS.begin();
   Serial.println("System started");
   if(!fetchDatabase()) {
