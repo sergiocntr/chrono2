@@ -132,7 +132,8 @@ void connectMQTT()
   }
   Serial.print("Connecting to mqtt server: ");
   Serial.println(MQTT_SERVER);
-  client.connect(SKETCH_ID, MQTT_USER, MQTT_PASSWORD);
+  //if (client.connect(nodeID,mqttUser,mqttPass,"",0,1,""))
+  client.connect(SKETCH_ID, MQTT_USER, MQTT_PASSWORD,"prova",0,1,"prova");
   delay(500);
   if (client.connected()) {
     send("units-bootup", String(SKETCH_ID) + "-bootup"); // Initial system status publish to server
@@ -141,6 +142,9 @@ void connectMQTT()
     client.subscribe(systemTopic); // Subscribe to Ping
     client.subscribe(casaSensTopic); // Subscribe to Ping
     client.subscribe(extSensTopic); // Subscribe to Ping
+    client.subscribe(riscaldaTopic); // Subscribe to Ping
+    client.subscribe(acquaTopic); // Subscribe to Ping
+
     Serial.println(".. Connected!!");
     mqtt_reconnect_tries = 0;
     scheduled_reboot = false;

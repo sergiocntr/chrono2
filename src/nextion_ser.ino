@@ -41,16 +41,17 @@ int db_array_len = 5;
  NexText Nset_temp   = NexText(0, 2, "Nset_temp");
  NexText Ntcurr      = NexText(0, 3, "Ntcurr");
  NexText Nout_temp   = NexText(0, 4, "Nout_temp");
- NexCrop Nrisc_on    = NexCrop(0, 5, "Nrisc_on");
- NexCrop Nwater_on   = NexCrop(0, 6, "Nwater_on");
- NexText Nout_hum    = NexText(0, 7, "Nout_hum");
- NexText Nin_hum     = NexText(0, 8, "Nin_hum");
- NexText Ncurr_hour  = NexText(0, 9, "Ncurr_hour");
- NexText Ncurr_water_temp  = NexText(0, 12, "Nwater_temp");
- NexText Nday  = NexText(0, 13, "Nday");
+ NexCrop Nwater_on   = NexCrop(0, 5, "Nwater_on");
 
- NexButton Nb_up     = NexButton(0, 10, "Nb_up");
- NexButton Nb_down   = NexButton(0, 11, "Nb_down");
+ NexText Nout_hum    = NexText(0, 6, "Nout_hum");
+ NexText Nin_hum     = NexText(0, 7, "Nin_hum");
+ NexText Ncurr_hour  = NexText(0, 8, "Ncurr_hour");
+ NexButton Nb_up     = NexButton(0, 9, "Nb_up");
+ NexButton Nb_down   = NexButton(0, 10, "Nb_down");
+ NexText Ncurr_water_temp  = NexText(0, 11, "Nwater_temp");
+ NexText Nday  = NexText(0, 12, "Nday");
+ NexCrop Nrisc_on    = NexCrop(0, 13, "Nrisc_on");
+ NexCrop Nalarm    = NexCrop(0, 14, "Nalarm");
 
 /*
    Register object textNumber, buttonPlus, buttonMinus, to the touch event list.
@@ -117,7 +118,7 @@ void Nb_downPushCallback(void *ptr)
 void Nrisc_onPushCallback(void *ptr)
 {
     uint32_t number = toggle_button(1);
-    Nrisc_on.setPic(number);
+    //Nrisc_on.setPic(number);
     if (number == 0) {
       send(riscaldaTopic, "0");
     } else {
@@ -127,6 +128,7 @@ void Nrisc_onPushCallback(void *ptr)
 
 void Nwater_onPushCallback(void *ptr)
 {
+  Serial.println("Nwater_onPushCallback sparato");
     uint32_t number = toggle_button(2);
     Nwater_on.setPic(number);
     if (number == 0) {
@@ -138,6 +140,10 @@ void Nwater_onPushCallback(void *ptr)
 
 int toggle_button(int value)
 {
+  //char buffer [10];
+  //itoa (db_array_value[value],buffer,10);
+  //Serial.print("Prima toggle ");
+  //Serial.println( buffer);
   if (db_array_value[value] == 1) {
     db_array_value[value] = 0;
     return 0;
@@ -145,6 +151,7 @@ int toggle_button(int value)
     db_array_value[value] = 1;
     return 1;
   }
+
 }
 
 /*************************************************************************************************************************
@@ -177,15 +184,59 @@ void setup() {
 
 void callback(char* topic, byte* payload, unsigned int length)
 {
+  if(strcmp(topic, acquaTopic) == 0 ) {
+    /*char buffer [10];
+    itoa (db_array_value[2],buffer,10);
+    Serial.print("Prima callbak ");
+    Serial.println( buffer);
+    itoa (payload[0],buffer,10);
+    Serial.print("Payload 0= ");
+    Serial.println( buffer);
+    //Serial.println("PRima: " + (char)db_array_value[2]);
+*/
+    if (char(payload[0]) == '0') {
+      //Serial.println(db_array_value[2]);
+      db_array_value[2] = 0;
+      Nwater_on.setPic(0);
+
+    }else{
+
+      //Serial.println("payload[1]");
+      db_array_value[2] = 1;
+      Nwater_on.setPic(1);
+    }
+    /*itoa (db_array_value[2],buffer,10);
+    Serial.print("Dopo callbak ");
+    Serial.println( buffer);
+    */
+  }
+  if(strcmp(topic, riscaldaTopic) == 0 ) {
+    if (char(payload[0]) == '0') {
+      db_array_value[1] = 0;
+      Nrisc_on.setPic(0);
+
+    }else{
+      db_array_value[1] = 1;
+      Nrisc_on.setPic(1);
+    }
+  }
 //*************************************************************************************************************************
 //Any modification to the portion below may leads towards system failure                                                  *
 //                                                                                                                        *
   String message = String();
   for (int i = 0; i < length; i++) {  //A loop to convert incomming message to a String
+    char input_char = (char)topic[i];
+    message += input_char;
+  }
+  Serial.print("mqtt topic received (");
+  Serial.print(message);
+  Serial.println(")");
+  message="";
+  for (int i = 0; i < length; i++) {  //A loop to convert incomming message to a String
     char input_char = (char)payload[i];
     message += input_char;
   }
-  Serial.print("mqtt message received (");
+  Serial.print("mqtt payload received (");
   Serial.print(message);
   Serial.println(")");
   send("Message recevied on ESP8266 Unit: [" + message + "]");
@@ -234,9 +285,10 @@ void callback(char* topic, byte* payload, unsigned int length)
       const char* Nex_outTemp = root["Temp"];
       Nout_temp.setText(Nex_outTemp);
       Nout_hum.setText(Nex_outHm);
-
     }
   }
+
+
 
 }
 
