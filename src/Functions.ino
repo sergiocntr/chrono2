@@ -51,7 +51,7 @@ void keeplive()
       }
     }
   scheduleReboot();
-  ArduinoOTA.handle();
+  
   delay(1);
 }
 

@@ -298,6 +298,7 @@ void callback(char* topic, byte* payload, unsigned int length)
 
 void loop()
 {
+  ArduinoOTA.handle();
   keeplive();   //necessary to call keep alive for proper functioning
   nexLoop(nex_listen_list);
 }
