@@ -1,3 +1,5 @@
+#ifndef ChronocConfig_h
+#define ChronocConfig_h
 /*************************************************************************************************************************
   Configure connection parameters
 *************************************************************************************************************************/
@@ -10,34 +12,35 @@ const char* systemTopic = "/system/general"; // {"topic":"UpTime","hours": time_
 //TOPIC COMANDO IN USCITA -> publish
 //il cronotermostato invia questi dati:
 //avvio acqua calda *** anche subscrive per ricevere il dato
-const char* riscaldaTopic = "/casa/esterno/caldaia/relay"; // 0 o 1 per attivare il riscaldamento
+const char* riscaldaTopic = "**********"; // 0 o 1 per attivare il riscaldamento
 //avvio riscaldamento *** anche subscrive per ricevere il dato
-const char* acquaTopic ="/casa/esterno/caldaia/acqua";  //0 o 1 per attivare il preriscaldamento acqua
+const char* acquaTopic ="**********";  //0 o 1 per attivare il preriscaldamento acqua
 //sblocco caldaia
-const char* resetTopic ="/casa/esterno/caldaia/reset"; //0 o 1 per premere pulsante reset
+const char* resetTopic ="**********"; //0 o 1 per premere pulsante reset
 //logTopic
-const char* logTopic ="/casa/esterno/caldaia/log"; // temp H20 caldaia
+const char* logTopic ="**********"; // temp H20 caldaia
 //TOPIC COMANDO IN INGRESSO -> subscrive
 //il cronotermostato riceve questi dati:
 //stato caldaia in blocco
-const char* alarmTopic ="/casa/esterno/caldaia/alarm";   //ON OFF allarme blocco attivo
+const char* alarmTopic ="**********";   //ON OFF allarme blocco attivo
 //temp H2O caldaia
-const char* extSensTopic ="/casa/esterno/sensori"; // temp H20 caldaia
+const char* extSensTopic ="**********"; // temp H20 caldaia
 //temp CASA
-const char* casaSensTopic = "/casa/interno/sensori";
+const char* casaSensTopic = "**********";
 //temp EXT
-const char* extTempTopic = "/casa/esterno/terrazza_leo/sensori";
-const char* WIFI_SSID = "TIM-23836387";
-const char* WIFI_PASSWORD = "51vEBuMvmALxNQHVIHQKkn52";
-const char* MQTT_SERVER = "192.168.1.100";          //IP Adress of Machine running MQTT Broker
-const char* MQTT_USER = "sergio";                      //MQTT Broker User Name
-const char* MQTT_PASSWORD = "donatella";           //MQTT Broker Password
-const uint16_t MQTT_PORT = 8883;
-IPAddress ip(192, 168, 1, 215); //Node static IP
-IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 255, 0);
+const char* extTempTopic = "**********";
+const char* WIFI_SSID = "**********";
+const char* WIFI_PASSWORD = "**********";
+const char* MQTT_SERVER = "**********";          //IP Adress of Machine running MQTT Broker
+const char* MQTT_USER = "**********";                      //MQTT Broker User Name
+const char* MQTT_PASSWORD = "**********";           //MQTT Broker Password
+const uint16_t MQTT_PORT = **********;
+IPAddress ip(***, ***, ***, ***); //Node static IP
+IPAddress gateway(***, ***, ***, ***);
+IPAddress subnet(***, ***, ***, ***);
 /*************************************************************************************************************************
   Configure database parameters
 *************************************************************************************************************************/
 char buffer[30] = {0};
 int db_array_default_value = 0;                    //default value to write in database e.g. default gpio state
+#endif

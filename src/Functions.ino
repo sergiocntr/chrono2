@@ -51,7 +51,7 @@ void keeplive()
       }
     }
   scheduleReboot();
-  
+
   delay(1);
 }
 
@@ -61,6 +61,9 @@ void keeplive()
 
 void connectWiFi()
 {
+  WiFi.forceSleepWake();
+  delay(1);
+  WiFi.mode(WIFI_STA);
   ++ wifi_reconnect_tries;
   if (mqtt_reconnect_tries != 0) {
     mqtt_reconnect_tries = 0;
@@ -89,6 +92,7 @@ void connectWiFi()
     while (WiFi.status() != WL_CONNECTED) {
       Serial.print(".");
       if (WiFi.status() == WL_CONNECTED) {
+        sendCommand("sleep=0");
         break;
       }
       if ((millis() - wifi_initiate) > 15000L) {
@@ -117,6 +121,11 @@ void connectWiFi()
       wifi_check_time = 300000L;
       wifi_reconnect_tries = 0;
       Serial.println("System will try again after 5 minutes");
+      sendCommand("thup=1");
+      sendCommand("sleep=1");
+      WiFi.mode( WIFI_OFF );
+      WiFi.forceSleepBegin();
+      delay( 1 );
     }
   }
 }

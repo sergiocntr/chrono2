@@ -20,7 +20,7 @@
 //#include <ESP8266HTTPClient.h>    //builtin library for ESP8266 Arduino Core
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
 #include "FS.h"                   //builtin library for ESP8266 Arduino Core
-#include "config.h"               //package builtin configuration file
+#include "ChronoConfig.h"               //package builtin configuration file
 #include "init.h"                 //package builtin configuration file
 #include "Nextion.h"
 //#include <ESP8266WiFi.h>
@@ -162,12 +162,6 @@ void setup() {
   nexInit();
   boot();     //necessary to call at first during setup function for proper functioning
   sendCommand("dim=20");
-  //sendCommand("thsp=30");
-  //sendCommand("thup=1");
-  //nexSerial.write(0xFF);
-  //nexSerial.write(0xFF);
-  //nexSerial.write(0xFF);
-  //nexSerial.flush();
   Nrisc_on.attachPush(Nrisc_onPushCallback);
   Nwater_on.attachPush(Nwater_onPushCallback);
   Nb_up.attachPush(Nb_upPushCallback);
@@ -185,30 +179,16 @@ void setup() {
 void callback(char* topic, byte* payload, unsigned int length)
 {
   if(strcmp(topic, acquaTopic) == 0 ) {
-    /*char buffer [10];
-    itoa (db_array_value[2],buffer,10);
-    Serial.print("Prima callbak ");
-    Serial.println( buffer);
-    itoa (payload[0],buffer,10);
-    Serial.print("Payload 0= ");
-    Serial.println( buffer);
-    //Serial.println("PRima: " + (char)db_array_value[2]);
-*/
     if (char(payload[0]) == '0') {
       //Serial.println(db_array_value[2]);
       db_array_value[2] = 0;
       Nwater_on.setPic(0);
 
     }else{
-
-      //Serial.println("payload[1]");
       db_array_value[2] = 1;
       Nwater_on.setPic(1);
     }
-    /*itoa (db_array_value[2],buffer,10);
-    Serial.print("Dopo callbak ");
-    Serial.println( buffer);
-    */
+
   }
   if(strcmp(topic, riscaldaTopic) == 0 ) {
     if (char(payload[0]) == '0') {
@@ -251,15 +231,12 @@ void callback(char* topic, byte* payload, unsigned int length)
   StaticJsonBuffer<500> jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(jsonChar);
   if(strcmp(topic, systemTopic) == 0 ) {
-    //Serial.println("topic: " + ((String)topic));
     String msg_Topic = root["topic"];
-    //Serial.println("msg_Topic: " + msg_Topic);
     if(msg_Topic == "UpTime") {
       const char* Nex_Time = root["hours"];
       const char* Nex_Day = root["Day"];
       Ncurr_hour.setText(Nex_Time);
       Nday.setText(Nex_Day);
-      //Serial.println("regolata ora " + ((String)Nex_Time));
     }
   }
   if(strcmp(topic, casaSensTopic) == 0 ) {
@@ -275,10 +252,7 @@ void callback(char* topic, byte* payload, unsigned int length)
     String msg_Topic = root["topic"];
     if(msg_Topic == "Caldaia") {
       const char* Nex_wt = root["acqua"];
-      //dtostrf(root["acqua"], 4, 1, buffer);
       Ncurr_water_temp.setText(Nex_wt);
-      //const char* Nex_inTemp = root["Temp"];
-      //Ncurr_water_temp.setText(water_temp);
     }
     else if (msg_Topic == "Terrazza"){
       const char* Nex_outHm = root["Hum"];
@@ -287,9 +261,6 @@ void callback(char* topic, byte* payload, unsigned int length)
       Nout_hum.setText(Nex_outHm);
     }
   }
-
-
-
 }
 
 /*************************************************************************************************************************
