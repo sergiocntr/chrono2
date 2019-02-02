@@ -13,25 +13,29 @@
 *************************************************************************************************************************
   Required Libraries
 *************************************************************************************************************************/
-
+#include "topic.h"
+//
 #include <ESP8266WiFi.h>          //builtin library for ESP8266 Arduino Core
 #include <PubSubClient.h>         //https://github.com/knolleary/pubsubclient
 //#include <ESP8266httpUpdate.h>    //builtin library for ESP8266 Arduino Core
-//#include <ESP8266HTTPClient.h>    //builtin library for ESP8266 Arduino Core
+#include <SD.h>    //builtin library for ESP8266 Arduino Core
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
+#define FS_NO_GLOBALS
 #include "FS.h"                   //builtin library for ESP8266 Arduino Core
 #include "ChronoConfig.h"               //package builtin configuration file
 #include "init.h"                 //package builtin configuration file
 #include "Nextion.h"
-//#include <ESP8266WiFi.h>
+#include <SPI.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include "debugNex.h"
 
 /*************************************************************************************************************************
   Database variables
 *************************************************************************************************************************/
-
+//SoftwareSerial provaSerial(4, 5); // RX, TX
+//#define dbSerial provaSerial
 String db_array[] = {"Reboot", "q0", "q1", "q2", "q3"};
 int db_array_len = 5;
 /*
@@ -74,12 +78,10 @@ void update_buttons()
 }
 void Nb_upPushCallback(void *ptr)
 {
-  uint16_t len;
   double  number;
-  NexButton *btn = (NexButton *)ptr;
-  dbSerialPrintln("Nb_upPopCallback");
-  dbSerialPrint("ptr=");
-  dbSerialPrintln((uint32_t)ptr);
+  DEBUG_PRINT("Nb_upPopCallback");
+  //DEBUG_PRINT("ptr=");
+  //DEBUG_PRINT((uint32_t)ptr);
 
   memset(buffer, 0, sizeof(buffer));
 
@@ -94,12 +96,10 @@ void Nb_upPushCallback(void *ptr)
 }
 void Nb_downPushCallback(void *ptr)
 {
-    uint16_t len;
     double  number;
-    NexButton *btn = (NexButton *)ptr;
-    dbSerialPrintln("Nb_downPopCallback");
-    dbSerialPrint("ptr=");
-    dbSerialPrintln((uint32_t)ptr);
+    //DEBUG_PRINT("Nb_downPopCallback");
+    //DEBUG_PRINT("ptr=");
+    //DEBUG_PRINT((uint32_t)ptr);
     memset(buffer, 0, sizeof(buffer));
 
     /* Get the text value of button component [the value is string type]. */
@@ -128,7 +128,7 @@ void Nrisc_onPushCallback(void *ptr)
 
 void Nwater_onPushCallback(void *ptr)
 {
-  Serial.println("Nwater_onPushCallback sparato");
+  //DEBUG_PRINT("Nwater_onPushCallback sparato");
     uint32_t number = toggle_button(2);
     Nwater_on.setPic(number);
     if (number == 0) {
@@ -140,10 +140,6 @@ void Nwater_onPushCallback(void *ptr)
 
 int toggle_button(int value)
 {
-  //char buffer [10];
-  //itoa (db_array_value[value],buffer,10);
-  //Serial.print("Prima toggle ");
-  //Serial.println( buffer);
   if (db_array_value[value] == 1) {
     db_array_value[value] = 0;
     return 0;
@@ -180,7 +176,7 @@ void callback(char* topic, byte* payload, unsigned int length)
 {
   if(strcmp(topic, acquaTopic) == 0 ) {
     if (char(payload[0]) == '0') {
-      //Serial.println(db_array_value[2]);
+      //DEBUG_PRINT(db_array_value[2]);
       db_array_value[2] = 0;
       Nwater_on.setPic(0);
 
@@ -188,7 +184,6 @@ void callback(char* topic, byte* payload, unsigned int length)
       db_array_value[2] = 1;
       Nwater_on.setPic(1);
     }
-
   }
   if(strcmp(topic, riscaldaTopic) == 0 ) {
     if (char(payload[0]) == '0') {
@@ -200,27 +195,24 @@ void callback(char* topic, byte* payload, unsigned int length)
       Nrisc_on.setPic(1);
     }
   }
-//*************************************************************************************************************************
-//Any modification to the portion below may leads towards system failure                                                  *
-//                                                                                                                        *
   String message = String();
-  for (int i = 0; i < length; i++) {  //A loop to convert incomming message to a String
+  for (unsigned int i = 0; i < length; i++) {  //A loop to convert incomming message to a String
     char input_char = (char)topic[i];
     message += input_char;
   }
-  Serial.print("mqtt topic received (");
-  Serial.print(message);
-  Serial.println(")");
+  //DEBUG_PRINT("mqtt topic received (");
+  //DEBUG_PRINT(message);
+  //DEBUG_PRINT(")");
   message="";
-  for (int i = 0; i < length; i++) {  //A loop to convert incomming message to a String
+  for (unsigned int i = 0; i < length; i++) {  //A loop to convert incomming message to a String
     char input_char = (char)payload[i];
     message += input_char;
   }
-  Serial.print("mqtt payload received (");
-  Serial.print(message);
-  Serial.println(")");
-  send("Message recevied on ESP8266 Unit: [" + message + "]");
-  incomming(message);                 //Performing system fucntions such as OTA
+  //DEBUG_PRINT("mqtt payload received (");
+  //DEBUG_PRINT(message);
+  //DEBUG_PRINT(")");
+  //send("Message recevied on ESP8266 Unit: [" + message + "]");
+  //incomming(message);                 //Performing system fucntions such as OTA
 //                                                                                                                        *
 //Any modification to the portion above may leads towards system failure                                                  *                                             *
 //*************************************************************************************************************************
