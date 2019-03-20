@@ -43,4 +43,5 @@ IPAddress subnet(***, ***, ***, ***);
 *************************************************************************************************************************/
 char buffer[30] = {0};
 int db_array_default_value = 0;                    //default value to write in database e.g. default gpio state
+long wifi_check_time = 15000L;
 #endif
