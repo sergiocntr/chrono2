@@ -10,6 +10,8 @@
 #include "SPI.h"               //package builtin configuration file
 #include "SD.h"               //package builtin configuration file
 #include "Nextion.h"
+#include <ArduinoJson.h>
+#include "password.h"
 uint8_t db_array_value[3] = {0};
 char buffer[15]={0};
 NexText Nset_temp   = NexText(0, 2, "Nset_temp");
