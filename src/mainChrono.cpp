@@ -19,47 +19,12 @@ void setup() {
   delay(10);
   //checkmio = connectMQTT();
   connectMQTT();
-  /*switch (checkmio) {
-      case -4:
-        DEBUG_PRINT("MQTT_CONNECTION_TIMEOUT");
-        break;
-      case -3:
-        DEBUG_PRINT("MQTT_CONNECTION_LOST");
-        break;
-      case -2:
-        DEBUG_PRINT("MQTT_CONNECT_FAILED");
-        break;
-      case -1:
-        DEBUG_PRINT("MQTT_DISCONNECTED");
-        break;
-      case 0:
-        DEBUG_PRINT("MQTT_CONNECTED");
-        break;
-      case 1:
-        DEBUG_PRINT("MQTT_CONNECT_BAD_PROTOCOL");
-        break;
-      case 2:
-        DEBUG_PRINT("MQTT_CONNECT_BAD_CLIENT_ID");
-        break;
-      case 3:
-        DEBUG_PRINT("MQTT_CONNECT_UNAVAILABLE");
-        break;
-      case 4:
-        DEBUG_PRINT("MQTT_CONNECT_BAD_CREDENTIALS");
-        break;
-      case 5:
-        DEBUG_PRINT("MQTT_CONNECT_UNAUTHORIZED");
-        break;
-      default:
-        DEBUG_PRINT("MQTT_UNKNOWN_ERROR");
-        break;
-    }*/
   irrecv.enableIRIn();  // Start the receiver
   wifi_reconnect_time = millis();
 }
 
 void spegniChr(){
-  wifi_check_time = 600000L;
+  wifi_check_time = 1200000;
   sendCommand("thup=1");
   sendCommand("sleep=1");
   wifi_set_sleep_type(LIGHT_SLEEP_T);
@@ -159,7 +124,7 @@ void loop() {
       reconnect();
     }else {
       mqtt_reconnect_tries=0;
-      wifi_check_time = 6000L;
+      wifi_check_time = 300000; //ogni 5 minuti
     }
     if ((mqtt_reconnect_tries > 5) && (!client.connected())) spegniChr();
   }

@@ -8,16 +8,12 @@
 #include "topic.h"
 #include <ESP8266WiFi.h>
 SoftwareSerial mydbSerial(4, 5); // RX, TX
-const uint16_t versione = 10;
+const uint16_t versione = 12;
 const char* mqttId="Chrono";
 uint8_t check=0;
 long lastMsg = 0;
 char msg[50];
 int value = 0;
-uint8_t mqtt_reconnect_tries = 0;
-unsigned long wifi_reconnect_time;
-unsigned long wifi_check_time = 6000L;
-//IPAddress ip(192, 168, 1, 49);
 void spegniChr();
 void checkForUpdates();
 void reconnect();
