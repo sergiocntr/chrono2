@@ -1,10 +1,10 @@
 #include <mainChrono.h>
 void setup() {
   nex_routines();
-  String clientId = String(mqttId);
-  clientId += String(random(0xffff), HEX);
-  yield();
-  setIP(ipChrono,clientId.c_str());
+  //String clientId = String(mqttId);
+  //clientId += String(random(0xffff), HEX);
+  //yield();
+  setIP(ipChrono,chronoId);
   //int8_t checkmio=0;
   //checkmio = connectWiFi();
   connectWiFi();
@@ -111,7 +111,8 @@ void reconnect() {
     client.subscribe(updateTopic);
     client.loop();
     delay(10);
-  }}
+  }
+}
 void loop() {
   //delay(10);
   if((millis() - wifi_reconnect_time) > wifi_check_time){    //se sono passati piu x secondi dall ultimo controllo
@@ -153,10 +154,12 @@ void loop() {
 void callback(char* topic, byte* payload, unsigned int length){
   check=0;
   if(strcmp(topic,updateTopic) == 0){
-    delay(10);
-    check=1;
-    Ntcurr.setText("UPMQ");
-    checkForUpdates();
+    if (char(payload[0]) == '0') {
+      delay(10);
+      check=1;
+      Ntcurr.setText("UPMQ");
+      checkForUpdates();
+    }
   }
   else if(strcmp(topic, acquaTopic) == 0 ) {
     check=1;
