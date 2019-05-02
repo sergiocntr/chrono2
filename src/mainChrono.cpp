@@ -1,24 +1,18 @@
 #include <mainChrono.h>
 void setup() {
   nex_routines();
-  //String clientId = String(mqttId);
-  //clientId += String(random(0xffff), HEX);
-  //yield();
-  setIP(ipChrono,chronoId);
-  //int8_t checkmio=0;
-  //checkmio = connectWiFi();
-  connectWiFi();
-  delay(10);
-  //if(checkmio == 0){
-    //DEBUG_PRINT("WIFI OK");
-  //}
   yield();
-  //mqttId=clientId.c_str();
+  setIP(ipChrono,chronoId);
+  int8_t checkmio=0;
+  checkmio = connectWiFi();
+  stampaDebug(checkmio);
+  delay(10);
+  yield();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
   delay(10);
-  //checkmio = connectMQTT();
-  connectMQTT();
+  checkmio = connectMQTT();
+  reconnect();
   irrecv.enableIRIn();  // Start the receiver
   wifi_reconnect_time = millis();
 }
@@ -108,9 +102,11 @@ void reconnect() {
     client.loop();
     client.subscribe(riscaldaTopic);
     //if(check)   DEBUG_PRINT("riscaldaTopic OK");
-    client.subscribe(updateTopic);
+    int8_t check = client.subscribe(updateTopic);
     client.loop();
     delay(10);
+    if(check==0) stampaDebug(3);
+    else stampaDebug(2);
   }
 }
 void loop() {

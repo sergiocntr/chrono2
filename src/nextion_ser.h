@@ -1,3 +1,4 @@
+
 #include "topic.h"
 #include "myFunctions.h"
 #include "SPI.h"               //package builtin configuration file
@@ -27,6 +28,30 @@ NexTouch *nex_listen_list[] ={
   &Nb_down,
   NULL
 };
+void stampaDebug(int8_t intmess){
+  String myMess;
+  switch (intmess) {
+    case 0:
+    myMess="W_OK";
+      
+      break;
+    case 1:
+      myMess="W_KO";
+
+      break;
+    case 2:
+      myMess="M_OK";
+
+      break;
+    case 3:
+      myMess="M_KO";
+
+      break;
+  }
+  Ntcurr.setText(myMess.c_str());
+  delay(2000);
+}
+
 void smartDelay(unsigned long mytime){
   unsigned long adesso = millis();
   while((millis()-adesso)<mytime){
