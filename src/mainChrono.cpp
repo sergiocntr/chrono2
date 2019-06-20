@@ -15,10 +15,11 @@ void setup() {
   reconnect();
   irrecv.enableIRIn();  // Start the receiver
   wifi_reconnect_time = millis();
+  wifi_check_time = 60000;
 }
 
 void spegniChr(){
-  wifi_check_time = 1200000;
+  wifi_check_time = 300 * 1000; // 5 minuti
   sendCommand("thup=1");
   sendCommand("sleep=1");
   wifi_set_sleep_type(LIGHT_SLEEP_T);
@@ -27,8 +28,6 @@ void spegniChr(){
   delay(1000);
 }
 void checkForUpdates() {
-  client.disconnect();
-  smartDelay(1000);
   String fwURL = String( fwUrlBase );
   fwURL.concat( mqttId );
   yield();
@@ -43,8 +42,9 @@ void checkForUpdates() {
   //Serial.prconst char* mqttID;intln( fwImageURL );
 //#ifdef HTTP_ON
   yield();
+  WiFiClient myLocalConn;
   HTTPClient httpClient;
-  httpClient.begin( c,fwVersionURL );
+  httpClient.begin( myLocalConn,fwVersionURL );
   int httpCode = httpClient.GET();
   if( httpCode == 200 ) {
     String newFWVersion = httpClient.getString();
@@ -53,14 +53,15 @@ void checkForUpdates() {
     delay(1000);
     if( newVersion > versione ) {
     //  Serial.println( "Preparing to update" );
-      t_httpUpdate_return ret = ESPhttpUpdate.update( c,fwImageURL );
+      client.disconnect();
+      smartDelay(1000);
+      t_httpUpdate_return ret = ESPhttpUpdate.update( myLocalConn,fwImageURL );
       yield();
       switch(ret) {
         case HTTP_UPDATE_FAILED:
           Ntcurr.setText("U_F");
           //check=1; //Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
           break;
-
         case HTTP_UPDATE_NO_UPDATES:
           Ntcurr.setText("N_U");
           //check=2;//Serial.println("HTTP_UPDATE_NO_UPDATES");
@@ -73,7 +74,6 @@ void checkForUpdates() {
     }
     else {
       Ntcurr.setText("S_V");
-      //check=0;//Serial.println( "Already on latest version" );
     }
   }
   else {
@@ -83,8 +83,8 @@ void checkForUpdates() {
     Ntcurr.setText("A_E");
   }
   httpClient.end();
-  //return check;
-}
+  myLocalConn.stop();
+  }
 void reconnect() {
   if(client.connected()) {
     client.publish(logTopic, mqttId);
@@ -105,7 +105,10 @@ void reconnect() {
     int8_t check = client.subscribe(updateTopic);
     client.loop();
     delay(10);
-    if(check==0) stampaDebug(3);
+    if(check==0) {
+      sendCommand("sleep=0");
+      stampaDebug(3);
+    }
     else stampaDebug(2);
   }
 }
@@ -119,36 +122,37 @@ void loop() {
       mqtt_reconnect_tries++;
       connectMQTT();
       reconnect();
+      wifi_check_time = 15000; //ogni 15 secondi
     }else {
       mqtt_reconnect_tries=0;
-      wifi_check_time = 300000; //ogni 5 minuti
+      wifi_check_time = 60000; //ogni 1 minuto
     }
-    if ((mqtt_reconnect_tries > 5) && (!client.connected())) spegniChr();
+    if ((mqtt_reconnect_tries > 2) && (!client.connected())) spegniChr();
   }
   if (irrecv.decode(&results)) {
-    uint64_t infraredNewValue=results.value;
+    uint64_t infraredNewValue = results.value;
     switch (infraredNewValue) {
       case spegni:
-        send(teleTopic,"spegni");
+        client.publish(teleTopic, "spegni", false);
+        //send(teleTopic,"spegni");
         break;
       case acquaON:
         send(acquaTopic,"1");
         break;
+      case eneOff:
+        send(eneTopic,"0");
+        break;
       default:
         String s=int64String(infraredNewValue,HEX,false);
-        //unsigned char myCharIRValue[sizeof(infraredNewValue)];
-        //std::memcpy(myCharIRValue,&infraredNewValue,sizeof(infraredNewValue));
         send(logTopic,s);
         break;
     }
-    //if(results.value==spegni){
-    //  send(teleTopic,"spegni");
-    //}//
     irrecv.resume();  // Receive the next value
   }
-  smartDelay(200);}
+  smartDelay(200);
+}
 void callback(char* topic, byte* payload, unsigned int length){
-  check=0;
+  uint8_t check=0;
   if(strcmp(topic,updateTopic) == 0){
     if (char(payload[0]) == '0') {
       delay(10);
@@ -163,7 +167,6 @@ void callback(char* topic, byte* payload, unsigned int length){
       //DEBUG_PRINT(db_array_value[2]);
       db_array_value[2] = 0;
       Nwater_on.setPic(0);
-
     }else{
       db_array_value[2] = 1;
       Nwater_on.setPic(1);
@@ -182,14 +185,7 @@ void callback(char* topic, byte* payload, unsigned int length){
   }
   if(check) return;
   yield();
-  String message = String();
-  char jsonChar[100];
-  for (unsigned int i = 0; i < length; i++) {  //A loop to convert incomming message to a String
-    char input_char = (char)payload[i];
-    message += input_char;
-  }
-  yield();
-  message.toCharArray(jsonChar, message.length()+1);
+  char *jsonChar = (char*)payload;
   StaticJsonBuffer<100> jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(jsonChar);
   if(strcmp(topic, systemTopic) == 0 ) {
@@ -224,4 +220,5 @@ void callback(char* topic, byte* payload, unsigned int length){
     }
   }
   delay(10);
-  client.loop();}
+  client.loop();
+  }

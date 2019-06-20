@@ -54,6 +54,7 @@ void stampaDebug(int8_t intmess){
 
 void smartDelay(unsigned long mytime){
   unsigned long adesso = millis();
+
   while((millis()-adesso)<mytime){
     client.loop();
     nexLoop(nex_listen_list);
