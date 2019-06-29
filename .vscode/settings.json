@@ -2,5 +2,6 @@
     "C_Cpp.errorSquiggles": "Disabled",
     "terminal.integrated.env.linux": {
         "PATH": "/home/sergio/.platformio/penv/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/home/sergio/.platformio/penv/bin"
-    }
+    },
+    "C_Cpp.dimInactiveRegions": true
 }

@@ -17,7 +17,6 @@ void setup() {
   wifi_reconnect_time = millis();
   wifi_check_time = 60000;
 }
-
 void spegniChr(){
   wifi_check_time = 300 * 1000; // 5 minuti
   sendCommand("thup=1");
@@ -40,7 +39,6 @@ void checkForUpdates() {
   fwImageURL.concat( "/firmware.bin" );
   //Serial.print( "Firmware  URL: " );
   //Serial.prconst char* mqttID;intln( fwImageURL );
-//#ifdef HTTP_ON
   yield();
   WiFiClient myLocalConn;
   HTTPClient httpClient;
@@ -144,7 +142,7 @@ void loop() {
         break;
       default:
         String s=int64String(infraredNewValue,HEX,false);
-        send(logTopic,s);
+        send(iRTopic,s);
         break;
     }
     irrecv.resume();  // Receive the next value
