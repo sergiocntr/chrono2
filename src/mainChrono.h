@@ -1,6 +1,8 @@
 #include <ArduinoJson.h>
+#include "debugutils.h"
 #include <Int64String.h>
 #include "SoftwareSerial.h"
+#include "myFunctions.h"
 #include "nextion_ser.h"
 #include "myIP.h"
 #include "irnextion.h"

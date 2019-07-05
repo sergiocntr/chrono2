@@ -1,17 +1,24 @@
 #include <mainChrono.h>
 void setup() {
-  nex_routines();
+  #ifdef DEBUGMIO
+    Serial.begin(9600);
+    delay(3000);
+    //DEBUG_PRINT("Booting");
+  #else
+    nex_routines();
+  #endif
+  
   yield();
   setIP(ipChrono,chronoId);
   int8_t checkmio=0;
   checkmio = connectWiFi();
-  stampaDebug(checkmio);
+  //DEBUG_PRINT("Wifi: " +String(checkmio));
   delay(10);
-  yield();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
   delay(10);
   checkmio = connectMQTT();
+  //DEBUG_PRINT("MQTT: "+ String(checkmio));
   reconnect();
   irrecv.enableIRIn();  // Start the receiver
   wifi_reconnect_time = millis();
@@ -90,28 +97,30 @@ void reconnect() {
     client.subscribe(systemTopic);
     client.loop();
     client.subscribe(casaSensTopic);
-    //if(check)   DEBUG_PRINT("casaSensTopic OK");
+    //if(check)   //DEBUG_PRINT("casaSensTopic OK");
     client.loop();
-    client.subscribe(extSensTopic);
-    //if(check)   DEBUG_PRINT("extSensTopic OK");
+    uint8_t check =client.subscribe(extSensTopic);
+    //DEBUG_PRINT("extSensTopic OK");
     client.loop();
     client.subscribe(acquaTopic);
-    //if(check)   DEBUG_PRINT("acquaTopic OK");
+    //if(check)   //DEBUG_PRINT("acquaTopic OK");
     client.loop();
     client.subscribe(riscaldaTopic);
-    //if(check)   DEBUG_PRINT("riscaldaTopic OK");
-    int8_t check = client.subscribe(updateTopic);
+    //if(check)   //DEBUG_PRINT("riscaldaTopic OK");
+    check = client.subscribe(updateTopic);
     client.loop();
     delay(10);
     if(check==0) {
       sendCommand("sleep=0");
       stampaDebug(3);
+      //DEBUG_PRINT("sleep 0");
     }
     else stampaDebug(2);
   }
 }
 void loop() {
-  //delay(10);
+  smartDelay(1000);
+  //return;
   if((millis() - wifi_reconnect_time) > wifi_check_time){    //se sono passati piu x secondi dall ultimo controllo
     wifi_reconnect_time = millis(); //questo è il tempo dell'ultimo controllo
     connectWiFi();
@@ -147,9 +156,19 @@ void loop() {
     }
     irrecv.resume();  // Receive the next value
   }
-  smartDelay(200);
+  //smartDelay(200);
 }
 void callback(char* topic, byte* payload, unsigned int length){
+  #ifdef DEBUGMIO
+  Serial.print("Message arrived [");  
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+  #else
+
   uint8_t check=0;
   if(strcmp(topic,updateTopic) == 0){
     if (char(payload[0]) == '0') {
@@ -162,7 +181,7 @@ void callback(char* topic, byte* payload, unsigned int length){
   else if(strcmp(topic, acquaTopic) == 0 ) {
     check=1;
     if (char(payload[0]) == '0') {
-      //DEBUG_PRINT(db_array_value[2]);
+      ////DEBUG_PRINT(db_array_value[2]);
       db_array_value[2] = 0;
       Nwater_on.setPic(0);
     }else{
@@ -219,4 +238,5 @@ void callback(char* topic, byte* payload, unsigned int length){
   }
   delay(10);
   client.loop();
+  #endif
   }

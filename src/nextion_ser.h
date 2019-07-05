@@ -33,7 +33,6 @@ void stampaDebug(int8_t intmess){
   switch (intmess) {
     case 0:
     myMess="W_OK";
-      
       break;
     case 1:
       myMess="W_KO";
