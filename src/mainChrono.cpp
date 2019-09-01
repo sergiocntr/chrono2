@@ -55,7 +55,7 @@ void checkForUpdates() {
     String newFWVersion = httpClient.getString();
     int newVersion = newFWVersion.toInt();
     Ntcurr.setText(newFWVersion.c_str());
-    delay(1000);
+    smartDelay(1000);
     if( newVersion > versione ) {
     //  Serial.println( "Preparing to update" );
       client.disconnect();
@@ -75,7 +75,7 @@ void checkForUpdates() {
           //Serial.println("[update] Update ok."); // may not called we reboot the ESP
           break;
       }
-      delay(1000);
+      smartDelay(1000);
     }
     else {
       Ntcurr.setText("S_V");
@@ -120,12 +120,11 @@ void reconnect() {
 }
 void loop() {
   smartDelay(1000);
-  //return;
   if((millis() - wifi_reconnect_time) > wifi_check_time){    //se sono passati piu x secondi dall ultimo controllo
     wifi_reconnect_time = millis(); //questo è il tempo dell'ultimo controllo
     connectWiFi();
     delay(100);
-    if (!client.connected()) {
+    if (!client.connected()){
       mqtt_reconnect_tries++;
       connectMQTT();
       reconnect();
@@ -168,7 +167,7 @@ void callback(char* topic, byte* payload, unsigned int length){
   }
   Serial.println();
   #else
-
+  smartDelay(200);
   uint8_t check=0;
   if(strcmp(topic,updateTopic) == 0){
     if (char(payload[0]) == '0') {
@@ -201,7 +200,7 @@ void callback(char* topic, byte* payload, unsigned int length){
     }
   }
   if(check) return;
-  yield();
+  smartDelay(200);
   char *jsonChar = (char*)payload;
   StaticJsonBuffer<100> jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(jsonChar);
@@ -236,7 +235,6 @@ void callback(char* topic, byte* payload, unsigned int length){
       Nout_hum.setText(Nex_outHm);
     }
   }
-  delay(10);
-  client.loop();
+  smartDelay(200);
   #endif
   }

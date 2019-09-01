@@ -28,6 +28,15 @@ NexTouch *nex_listen_list[] ={
   &Nb_down,
   NULL
 };
+void smartDelay(unsigned long mytime){
+  unsigned long adesso = millis();
+
+  while((millis()-adesso)<mytime){
+    client.loop();
+    nexLoop(nex_listen_list);
+    delay(10);
+  }
+}
 void stampaDebug(int8_t intmess){
   String myMess;
   switch (intmess) {
@@ -48,18 +57,10 @@ void stampaDebug(int8_t intmess){
       break;
   }
   Ntcurr.setText(myMess.c_str());
-  delay(2000);
+  smartDelay(2000);
 }
 
-void smartDelay(unsigned long mytime){
-  unsigned long adesso = millis();
 
-  while((millis()-adesso)<mytime){
-    client.loop();
-    nexLoop(nex_listen_list);
-    delay(10);
-  }
-}
 uint8_t toggle_button(int value){
   if (db_array_value[value] == 1) {
     db_array_value[value] = 0;
