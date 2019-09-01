@@ -10,7 +10,7 @@
 #include "topic.h"
 #include <ESP8266WiFi.h>
 SoftwareSerial mydbSerial(4, 5); // RX, TX
-const uint16_t versione = 30;
+const uint16_t versione = 31;
 const char* mqttId="Chrono";
 //uint8_t check=0;
 //long lastMsg = 0;
