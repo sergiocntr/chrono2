@@ -1,5 +1,6 @@
 #include <mainChrono.h>
 void setup() {
+  handleCrash();
   #ifdef DEBUGMIO
     Serial.begin(9600);
     delay(3000);
@@ -12,6 +13,7 @@ void setup() {
   setIP(ipChrono,chronoId);
   int8_t checkmio=0;
   checkmio = connectWiFi();
+  if(checkmio==0) sendCrash();
   //DEBUG_PRINT("Wifi: " +String(checkmio));
   delay(10);
   client.setServer(mqtt_server, mqtt_port);
@@ -23,6 +25,7 @@ void setup() {
   irrecv.enableIRIn();  // Start the receiver
   wifi_reconnect_time = millis();
   wifi_check_time = 60000;
+  
 }
 void spegniChr(){
   wifi_check_time = 300 * 1000; // 5 minuti
