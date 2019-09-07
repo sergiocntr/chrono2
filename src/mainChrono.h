@@ -11,9 +11,10 @@
 #include <ESP8266WiFi.h>
 #include <crash.h>
 SoftwareSerial mydbSerial(4, 5); // RX, TX
-const uint16_t versione = 32;
+const uint16_t versione = 36;
 const char* mqttId="Chrono";
 void spegniChr();
 void checkForUpdates();
 void reconnect();
+void checkConn();
 void callback(char* topic, byte* payload, unsigned int length);

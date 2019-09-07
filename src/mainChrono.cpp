@@ -1,30 +1,31 @@
+//#define DEBUGMIO
 #include <mainChrono.h>
 void setup() {
+  WiFi.mode(WIFI_OFF);
+  delay(10);
   handleCrash();
   #ifdef DEBUGMIO
+  //
+    setIP(ipChronoProva,provaId);
     Serial.begin(9600);
     delay(3000);
     //DEBUG_PRINT("Booting");
   #else
+    setIP(ipChrono,chronoId);
     nex_routines();
+    delay(10);
+    irrecv.enableIRIn();  // Start the receiver
   #endif
-  
   yield();
-  setIP(ipChrono,chronoId);
   int8_t checkmio=0;
   checkmio = connectWiFi();
   if(checkmio==0) sendCrash();
-  //DEBUG_PRINT("Wifi: " +String(checkmio));
-  delay(10);
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
-  delay(10);
-  checkmio = connectMQTT();
-  //DEBUG_PRINT("MQTT: "+ String(checkmio));
+  connectMQTT();
+  smartDelay(500);
   reconnect();
-  irrecv.enableIRIn();  // Start the receiver
-  wifi_reconnect_time = millis();
-  wifi_check_time = 60000;
+  wifi_reconnect_time=millis();
   
 }
 void spegniChr(){
@@ -94,49 +95,36 @@ void checkForUpdates() {
   myLocalConn.stop();
   }
 void reconnect() {
-  if(client.connected()) {
-    client.publish(logTopic, mqttId);
-      // ... and resubscribe
-    client.subscribe(systemTopic);
-    client.loop();
-    client.subscribe(casaSensTopic);
-    //if(check)   //DEBUG_PRINT("casaSensTopic OK");
-    client.loop();
-    uint8_t check =client.subscribe(extSensTopic);
-    //DEBUG_PRINT("extSensTopic OK");
-    client.loop();
-    client.subscribe(acquaTopic);
-    //if(check)   //DEBUG_PRINT("acquaTopic OK");
-    client.loop();
-    client.subscribe(riscaldaTopic);
-    //if(check)   //DEBUG_PRINT("riscaldaTopic OK");
-    check = client.subscribe(updateTopic);
-    client.loop();
-    delay(10);
-    if(check==0) {
-      sendCommand("sleep=0");
-      stampaDebug(3);
-      //DEBUG_PRINT("sleep 0");
-    }
-    else stampaDebug(2);
-  }
+  client.publish(logTopic, "Crono - prova connesso");
+  client.subscribe(systemTopic);
+  client.subscribe(casaSensTopic);
+  client.subscribe(extSensTopic);
+  client.subscribe(acquaTopic);
+  client.subscribe(riscaldaTopic);
+  client.subscribe(updateTopic);
+  client.loop();
 }
 void loop() {
-  smartDelay(1000);
-  if((millis() - wifi_reconnect_time) > wifi_check_time){    //se sono passati piu x secondi dall ultimo controllo
-    wifi_reconnect_time = millis(); //questo è il tempo dell'ultimo controllo
-    connectWiFi();
-    delay(100);
-    if (!client.connected()){
+  smartDelay(2000);
+  if((millis() - wifi_reconnect_time) > wifi_check_time){ 
+    DEBUG_PRINT("Controllo WIFI");
+    wifi_reconnect_time=millis();
+    if (client.state()!=0) {  // se non connesso a MQTT
+      DEBUG_PRINT("MQTT NON VA");
       mqtt_reconnect_tries++;
+      connectWiFi();    //verifico connessione WIFI
+      delay(100);
       connectMQTT();
+      smartDelay(500);
       reconnect();
-      wifi_check_time = 15000; //ogni 15 secondi
+      wifi_check_time = 20000; //venti secondi
     }else {
+      DEBUG_PRINT("WIFI OK");
       mqtt_reconnect_tries=0;
-      wifi_check_time = 60000; //ogni 1 minuto
+      wifi_check_time = 300000; //ogni 5 minuti
     }
-    if ((mqtt_reconnect_tries > 2) && (!client.connected())) spegniChr();
+    if ((mqtt_reconnect_tries > 2) && (!client.connected())) spegniChr();  //cinque minuti
+    
   }
   if (irrecv.decode(&results)) {
     uint64_t infraredNewValue = results.value;

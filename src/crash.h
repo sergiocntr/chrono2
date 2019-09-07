@@ -26,11 +26,13 @@ void sendCrash(){
     {
       DEBUG_PRINT("File doesn't exist yet.");
     } else {
-      DEBUG_PRINT("File size: " + String(f.size()));
+      uint16_t fileSize =f.size()
+      DEBUG_PRINT("File size: " + String(fileSize));
+      if(fileSize<30) return;
       String line;
       while(f.available()) {
         //Lets read line by line from the file
-         line =line + f.readStringUntil('n') + '\n';
+         line =line + f.readStringUntil('\n') + '\n';
           yield();
         
        }

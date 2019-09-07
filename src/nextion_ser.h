@@ -29,8 +29,8 @@ NexTouch *nex_listen_list[] ={
   NULL
 };
 void smartDelay(unsigned long mytime){
-  unsigned long adesso = millis();
-
+  uint32_t adesso = millis();
+  if (!client.connected()) connectMQTT();
   while((millis()-adesso)<mytime){
     client.loop();
     nexLoop(nex_listen_list);
