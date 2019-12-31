@@ -1,41 +1,124 @@
 //#define DEBUGMIO
 #include <mainChrono.h>
-void setup() {
-  WiFi.mode(WIFI_OFF);
-  delay(10);
-  handleCrash();
-  #ifdef DEBUGMIO
-  //
-    setIP(ipChronoProva,provaId);
-    Serial.begin(9600);
-    delay(3000);
-    //DEBUG_PRINT("Booting");
-  #else
-    setIP(ipChrono,chronoId);
-    nex_routines();
-    delay(10);
-    irrecv.enableIRIn();  // Start the receiver
-  #endif
-  yield();
-  int8_t checkmio=0;
-  checkmio = connectWiFi();
-  if(checkmio==0) sendCrash();
-  client.setServer(mqtt_server, mqtt_port);
-  client.setCallback(callback);
-  connectMQTT();
-  smartDelay(500);
-  reconnect();
-  wifi_reconnect_time=millis();
+void handleCrash(){
+  bool result = SPIFFS.begin();
+  //DEBUG_PRINT(" SPIFFS opened: " + String(result));
+  //SaveCrash.print();
+  File f = SPIFFS.open(crashFilename, "a+");
+  f.println("crash chrono");
+  SaveCrash.print(f);
+  delay(100);
+  SaveCrash.clear();
+  f.close();
+  delay(100); 
+}
+void sendCrash(){
+  HTTPClient http;
+  File f = SPIFFS.open(crashFilename, "r");
+  if (f) 
+  {
+    uint16_t fileSize =f.size();
+    //DEBUG_PRINT("File size: " + String(fileSize));
+    if(fileSize<30) return;
+    String line;
+    while(f.available()) {
+      //Lets read line by line from the file
+        line =line + f.readStringUntil('\n') + '\n';
+        delay(10);
+      
+      }
+    f.close();
+    SPIFFS.remove(crashFilename);
+    delay(100);
+    //DEBUG_PRINT("Stiamo per inviare: " + line);
+    int httpResponseCode=0;
+    c.connect(host, httpPort);
+    delay(100);
+    http.begin(c,post_serverCrash);
+    http.addHeader("Content-Type","text/plain");
+    httpResponseCode = http.PUT(line);
+    String response = http.getString();                       //Get the response to the request
+    //DEBUG_PRINT("Responso dal server: " + response);           //Print request answer
+    //DEBUG_PRINT("Code dal server: " + String(httpResponseCode));
+    delay(100);
+    http.end();
+    delay(100);
+  }
   
 }
-void spegniChr(){
-  wifi_check_time = 300 * 1000; // 5 minuti
+void blinkLed(uint8_t volte){
+  for (uint8_t i = 0; i < volte; i++)
+  {
+    digitalWrite(LED_BUILTIN,LOW);
+    delay(250);
+    digitalWrite(LED_BUILTIN,HIGH);
+    delay(250);
+  }
+}
+void adessoDormo(){
   sendCommand("thup=1");
   sendCommand("sleep=1");
+  client.disconnect();
+  delay(10);
+  WiFi.disconnect(true);
   wifi_set_sleep_type(LIGHT_SLEEP_T);
   WiFi.mode(WIFI_OFF); //energy saving mode if local WIFI isn't connected
   WiFi.forceSleepBegin();
-  delay(1000);
+  delay(180000);
+  ESP.reset();
+}
+void setupWifi(){
+  WiFi.persistent(false);   // Solve possible wifi init errors (re-add at 6.2.1.16 #4044, #4083)
+  WiFi.disconnect(true);    // Delete SDK wifi config
+  delay(200);
+  WiFi.setOutputPower(17);        // 10dBm == 10mW, 14dBm = 25mW, 17dBm = 50mW, 20dBm = 100mW
+  WiFi.mode(WIFI_OFF); //energy saving mode if local WIFI isn't connected
+  delay(10);
+  WiFi.hostname("chrono");      // DHCP Hostname (useful for finding device for static lease)
+  WiFi.mode(WIFI_STA);
+  WiFi.forceSleepWake();
+  delay(10);
+  WiFi.config(ipChrono, gateway, subnet,dns1,dns2); // Set static IP (2,7s) or 8.6s with DHCP  + 2s on battery
+  delay(10);
+  WiFi.begin(ssid, password);
+}
+void setup() {
+  handleCrash();
+  nex_routines();
+  pinMode(LED_BUILTIN,OUTPUT);
+  digitalWrite(LED_BUILTIN,HIGH);
+  irrecv.enableIRIn();  // Start the receiver
+  setupWifi();
+  delay(10);
+  wifi_initiate = millis();
+  while (WiFi.status() != WL_CONNECTED) {
+    if ((millis() - wifi_initiate) > 5000L) {
+      adessoDormo();
+      //dopo c'e' il restart
+    }
+    delay(500);
+  }
+  blinkLed(2);
+  sendCrash();
+  String clientId = String("chrono");
+  clientId += String(random(0xffff), HEX);
+  delay(10);
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(callback);
+  delay(100);
+  client.connect(clientId.c_str(),mqttUser,mqttPass);
+  delay(10);
+  wifi_initiate = millis();
+  while (!client.connected()) {
+    if ((millis() - wifi_initiate) > 5000L) {
+      adessoDormo();
+      //dopo c'e' il restart
+    }
+    delay(500);
+  } 
+  reconnect();
+  if(mqttOK){blinkLed(3);}
+  
 }
 void checkForUpdates() {
   String fwURL = String( fwUrlBase );
@@ -95,35 +178,31 @@ void checkForUpdates() {
   myLocalConn.stop();
   }
 void reconnect() {
-  client.publish(logTopic, "Crono - prova connesso");
+  client.publish(logTopic, "Crono connesso");
+  delay(10);
   client.subscribe(systemTopic);
+  delay(10);
   client.subscribe(casaSensTopic);
+  delay(10);
   client.subscribe(extSensTopic);
+  delay(10);
   client.subscribe(acquaTopic);
+  delay(10);
   client.subscribe(riscaldaTopic);
+  delay(10);
   client.subscribe(updateTopic);
-  client.loop();
+  delay(10);
+  mqttOK=client.subscribe(eneValTopic);
+  smartDelay(50);
 }
 void loop() {
   smartDelay(2000);
-  if((millis() - wifi_reconnect_time) > wifi_check_time){ 
-    DEBUG_PRINT("Controllo WIFI");
-    wifi_reconnect_time=millis();
-    if (client.state()!=0) {  // se non connesso a MQTT
-      DEBUG_PRINT("MQTT NON VA");
-      mqtt_reconnect_tries++;
-      connectWiFi();    //verifico connessione WIFI
-      delay(100);
-      connectMQTT();
-      smartDelay(500);
-      reconnect();
-      wifi_check_time = 20000; //venti secondi
-    }else {
-      DEBUG_PRINT("WIFI OK");
-      mqtt_reconnect_tries=0;
-      wifi_check_time = 300000; //ogni 5 minuti
-    }
-    if ((mqtt_reconnect_tries > 2) && (!client.connected())) spegniChr();  //cinque minuti
+  if((millis() - wifi_initiate) > 190000L){ 
+    //DEBUG_PRINT("Controllo WIFI");
+    
+      adessoDormo();
+      //dopo c'e' il restart
+    
     
   }
   if (irrecv.decode(&results)) {
@@ -131,22 +210,22 @@ void loop() {
     switch (infraredNewValue) {
       case spegni:
         client.publish(teleTopic, "spegni", false);
-        //send(teleTopic,"spegni");
+        //mqttOK=client.publish(teleTopic,"spegni");
         break;
       case acquaON:
-        send(acquaTopic,"1");
+        mqttOK=client.publish(acquaTopic,"1");
         break;
       case eneOff:
-        send(eneTopic,"0");
+        mqttOK=client.publish(eneTopic,"0");
         break;
       default:
         String s=int64String(infraredNewValue,HEX,false);
-        send(iRTopic,s);
+        mqttOK=client.publish(iRTopic,s.c_str());
         break;
     }
     irrecv.resume();  // Receive the next value
   }
-  //smartDelay(200);
+  smartDelay(3000);
 }
 void callback(char* topic, byte* payload, unsigned int length){
   #ifdef DEBUGMIO
@@ -192,12 +271,14 @@ void callback(char* topic, byte* payload, unsigned int length){
   }
   if(check) return;
   smartDelay(200);
-  char *jsonChar = (char*)payload;
+  //char *jsonChar = (char*)payload;
   StaticJsonBuffer<100> jsonBuffer;
-  JsonObject& root = jsonBuffer.parseObject(jsonChar);
+  JsonObject& root = jsonBuffer.parseObject(payload);
   if(strcmp(topic, systemTopic) == 0 ) {
     String msg_Topic = root["topic"];
     if(msg_Topic == "UpTime") {
+      wifi_initiate=millis();
+      delay(10);
       const char* Nex_Time = root["hours"];
       const char* Nex_Day = root["Day"];
       Ncurr_hour.setText(Nex_Time);
@@ -226,6 +307,115 @@ void callback(char* topic, byte* payload, unsigned int length){
       Nout_hum.setText(Nex_outHm);
     }
   }
+  else if(strcmp(topic, eneValTopic) == 0 ) {
+    String msg_Topic = root["topic"];
+    if(msg_Topic == "EneMain") {
+      const char* Nex_eneVal = root["e"];
+      Nset_temp.setText(Nex_eneVal);
+    }
+  }
   smartDelay(200);
   #endif
+  }
+
+void smartDelay(unsigned long mytime){
+  uint32_t adesso = millis();
+  //if (!client.connected()) connectMQTT();
+  while((millis()-adesso)<mytime){
+    client.loop();
+    nexLoop(nex_listen_list);
+    delay(10);
+  }
+}
+void stampaDebug(int8_t intmess){
+  String myMess;
+  switch (intmess) {
+    case 0:
+    myMess="W_OK";
+      break;
+    case 1:
+      myMess="W_KO";
+
+      break;
+    case 2:
+      myMess="M_OK";
+
+      break;
+    case 3:
+      myMess="M_KO";
+
+      break;
+  }
+  Ntcurr.setText(myMess.c_str());
+  smartDelay(2000);
+}
+
+
+uint8_t toggle_button(int value){
+  if (db_array_value[value] == 1) {
+    db_array_value[value] = 0;
+    return 0;
+  } else {
+    db_array_value[value] = 1;
+    return 1;
+  }
+}
+void update_buttons(){
+    Nrisc_on.setPic(db_array_value[1]);
+    Nwater_on.setPic(db_array_value[2]);
+}
+void Nb_upPushCallback(void *ptr){
+  double  number;
+  memset(buffer, 0, sizeof(buffer));
+  Nset_temp.getText(buffer, sizeof(buffer));
+  number = strtod (buffer,NULL);
+  number += 0.5;
+  dtostrf(number, 4, 1, buffer);
+  Nset_temp.setText(buffer);
+}
+void Nb_downPushCallback(void *ptr){
+    double  number;
+    memset(buffer, 0, sizeof(buffer));
+    Nset_temp.getText(buffer, sizeof(buffer));
+
+    number = strtod (buffer,NULL);
+    number -= 0.5;
+    dtostrf(number, 4, 1, buffer);
+    Nset_temp.setText(buffer);
+}
+void Nrisc_onPushCallback(void *ptr){
+    uint32_t number = toggle_button(1);
+    //Nrisc_on.setPic(number);
+    if (number == 0) {
+      client.publish(riscaldaTopic, "0");
+    } else {
+      client.publish(riscaldaTopic, "1");
+    }
+}
+void Nwater_onPushCallback(void *ptr){
+  uint32_t number = toggle_button(2);
+    Nwater_on.setPic(number);
+    if (number == 0) {
+      mqttOK=client.publish(acquaTopic, "0");
+    } else {
+      mqttOK=client.publish(acquaTopic, "1");
+    }
+}
+void nex_routines(){
+  nexInit();
+  delay(10);
+  sendCommand("dim=20");
+   Nset_temp.setText("");
+  Ntcurr.setText("");
+  Nout_temp.setText("");
+  Nout_hum.setText("");
+  Nin_hum.setText("");
+  Ncurr_hour.setText("");
+  Ncurr_water_temp.setText("");
+  Nday.setText("");
+  Nrisc_on.attachPush(Nrisc_onPushCallback);
+  Nwater_on.attachPush(Nwater_onPushCallback);
+  Nb_up.attachPush(Nb_upPushCallback);
+  Nb_down.attachPush(Nb_downPushCallback);
+  update_buttons();
   }
