@@ -6,7 +6,7 @@
 #include "FS.h"
 #include <Int64String.h>
 #include "SoftwareSerial.h"
-#include "EspSaveCrash.h"
+//#include "EspSaveCrash.h"
 //#include "nextion_ser.h"
 #include "myIP.h"
 #include "irnextion.h"
@@ -16,6 +16,10 @@
 #include "SPI.h"               //package builtin configuration file
 #include "SD.h"               //package builtin configuration file
 #include "Nextion.h"
+ 
+#include "DHT.h"
+const uint16_t versione = 72;
+DHT dht;
 uint8_t db_array_value[3] = {0};
 char buffer[15]={0};
 NexText Nset_temp         = NexText(0, 2, "Nset_temp");
@@ -38,16 +42,16 @@ NexTouch *nex_listen_list[] ={
   &Nb_down,
   NULL
 };
-EspSaveCrash SaveCrash;
+//EspSaveCrash SaveCrash;
 //SoftwareSerial mydbSerial(4, 5); // RX, TX
 WiFiClient mywifi;
 WiFiClient c;
 PubSubClient client(c);
-const uint16_t versione = 42;
+
 uint8_t mqtt_reconnect_tries=0;
 uint8_t mqttOK=0;
 uint32_t wifi_initiate =0;
-uint32_t wifi_check_time=600000L;
+uint32_t wifi_check_time=240000L;
 const char* mqttId="Chrono";
 void spegniChr();
 void checkForUpdates();
@@ -63,5 +67,7 @@ void update_buttons();
 uint8_t toggle_button(int value);
 void stampaDebug(int8_t intmess);
 void smartDelay(unsigned long mytime);
-void handleCrash();
-void sendCrash();
+//void handleCrash();
+//void sendCrash();
+void sendMySql(char* temp,char* hum);
+void getLocalTemp();

@@ -1,6 +1,5 @@
-//#define DEBUGMIO
 #include <mainChrono.h>
-void handleCrash(){
+/*void handleCrash(){
   bool result = SPIFFS.begin();
   //DEBUG_PRINT(" SPIFFS opened: " + String(result));
   //SaveCrash.print();
@@ -44,8 +43,8 @@ void sendCrash(){
     http.end();
     delay(100);
   }
-  
 }
+*/
 void blinkLed(uint8_t volte){
   for (uint8_t i = 0; i < volte; i++)
   {
@@ -78,16 +77,17 @@ void setupWifi(){
   WiFi.mode(WIFI_STA);
   WiFi.forceSleepWake();
   delay(10);
-  WiFi.config(ipChrono, gateway, subnet,dns1,dns2); // Set static IP (2,7s) or 8.6s with DHCP  + 2s on battery
+  WiFi.config(ipChrono, gateway, subnet,dns1); // Set static IP (2,7s) or 8.6s with DHCP  + 2s on battery
   delay(10);
   WiFi.begin(ssid, password);
 }
 void setup() {
-  handleCrash();
+  //handleCrash();
   nex_routines();
   pinMode(LED_BUILTIN,OUTPUT);
   digitalWrite(LED_BUILTIN,HIGH);
   irrecv.enableIRIn();  // Start the receiver
+  
   setupWifi();
   delay(10);
   wifi_initiate = millis();
@@ -99,8 +99,8 @@ void setup() {
     delay(500);
   }
   blinkLed(2);
-  sendCrash();
-  String clientId = String("chrono");
+  //sendCrash();
+  String clientId = String(mqttId);
   clientId += String(random(0xffff), HEX);
   delay(10);
   client.setServer(mqtt_server, mqtt_port);
@@ -111,14 +111,19 @@ void setup() {
   wifi_initiate = millis();
   while (!client.connected()) {
     if ((millis() - wifi_initiate) > 5000L) {
+      blinkLed(5);
       adessoDormo();
       //dopo c'e' il restart
     }
     delay(500);
   } 
+  delay(50);
   reconnect();
   if(mqttOK){blinkLed(3);}
-  
+  delay(10);
+  dht.setup(D4,dht.DHT22); // stesso del led
+  wifi_initiate=millis();
+  getLocalTemp();
 }
 void checkForUpdates() {
   String fwURL = String( fwUrlBase );
@@ -177,7 +182,34 @@ void checkForUpdates() {
   httpClient.end();
   myLocalConn.stop();
   }
+void getLocalTemp(){
+  delay(dht.getMinimumSamplingPeriod());
+  float humidity = dht.getHumidity();
+  float temperature = dht.getTemperature();
+  //const char* errDHT = dht.getStatusString();
+  smartDelay(100);
+  //char humChar[8]; // Buffer big enough for 7-character float
+  //char tempChar[8]; // Buffer big enough for 7-character float
+  //dtostrf(humidity, 6, 1, humChar); // Leave room for too large numbers!
+  //dtostrf(temperature, 6, 1, tempChar); // Leave room for too large numbers!
+  StaticJsonBuffer<256> jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  delay(10);
+  root["topic"]="SalChr";
+  root["hum"] = ((int)(humidity * 100 + .5) / 100.0);
+  root["temp"] = ((int)(temperature * 100 + .5) / 100.0);
+  char JSONmessageBuffer[256];
+  root.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+  smartDelay(100);
+  mqttOK = client.publish(casaSensTopic,JSONmessageBuffer,sizeof(JSONmessageBuffer));
+  smartDelay(100);
+  //sendMySql(tempChar,humChar);
+  //delay(10);
+  
+  //mqttOK = client.publish(logTopic,errDHT);
+}
 void reconnect() {
+  smartDelay(50);
   client.publish(logTopic, "Crono connesso");
   delay(10);
   client.subscribe(systemTopic);
@@ -197,20 +229,22 @@ void reconnect() {
 }
 void loop() {
   smartDelay(2000);
-  if((millis() - wifi_initiate) > 190000L){ 
-    //DEBUG_PRINT("Controllo WIFI");
-    
+  if((millis() - wifi_initiate) > wifi_check_time){ 
+    wifi_initiate=millis();
+    getLocalTemp();
+    if(!mqttOK)
+    {
       adessoDormo();
-      //dopo c'e' il restart
-    
-    
+    }
   }
   if (irrecv.decode(&results)) {
     uint64_t infraredNewValue = results.value;
     switch (infraredNewValue) {
+      case monnezza:
+        mqttOK=client.publish(teleTopic, "monnezza", false);
+        break;
       case spegni:
-        client.publish(teleTopic, "spegni", false);
-        //mqttOK=client.publish(teleTopic,"spegni");
+       mqttOK=client.publish(teleTopic,"spegni");
         break;
       case acquaON:
         mqttOK=client.publish(acquaTopic,"1");
@@ -225,7 +259,21 @@ void loop() {
     }
     irrecv.resume();  // Receive the next value
   }
-  smartDelay(3000);
+  
+}
+void sendMySql(char* temp,char* hum){
+  //WiFiClient mySqlclient;
+  if (mywifi.connect(host, httpPort))
+  {
+    String s =String("GET /meteofeletto/chrono_logger.php?temp=" + String(temp) +
+    +"&&pwd=" + webpass +
+    +"&&hum=" + String(hum) +
+    + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+    smartDelay(100);
+    mywifi.println(s);
+    smartDelay(100);
+    //mywifi.stop();
+  }
 }
 void callback(char* topic, byte* payload, unsigned int length){
   #ifdef DEBUGMIO
@@ -271,13 +319,12 @@ void callback(char* topic, byte* payload, unsigned int length){
   }
   if(check) return;
   smartDelay(200);
-  //char *jsonChar = (char*)payload;
   StaticJsonBuffer<100> jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(payload);
   if(strcmp(topic, systemTopic) == 0 ) {
     String msg_Topic = root["topic"];
     if(msg_Topic == "UpTime") {
-      wifi_initiate=millis();
+      //wifi_initiate=millis();
       delay(10);
       const char* Nex_Time = root["hours"];
       const char* Nex_Day = root["Day"];
@@ -349,8 +396,6 @@ void stampaDebug(int8_t intmess){
   Ntcurr.setText(myMess.c_str());
   smartDelay(2000);
 }
-
-
 uint8_t toggle_button(int value){
   if (db_array_value[value] == 1) {
     db_array_value[value] = 0;
